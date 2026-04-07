@@ -1,0 +1,4 @@
+for i in $(seq 1 10); do docker run -d nginx; done
+
+
+docker stop $(docker ps -q --filter ancestor=nginx)
