@@ -1,0 +1,57 @@
+services:
+  course-app:
+    build:
+      context: ./apps/course-app
+      dockerfile: Dockerfile
+    image: course-app:local
+    container_name: course-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8080"
+      APP_STORE: redis
+      APP_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    networks:
+      - course-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: course-redis
+    restart: unless-stopped
+    # AOF + RDB: дані зберігаються на диск і переживають перезапуск контейнера
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--appendfsync"
+      - "everysec"
+      - "--save"
+      - "60 1"
+    volumes:
+      - appdata:/data          # том для лічильника відвідувань (Redis persistence)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - course-net
+
+volumes:
+  appdata:                     # named volume — живе поза життєвим циклом контейнера
+
+networks:
+  course-net:
+    driver: bridge
