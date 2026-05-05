@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: course-app-ingress-tls
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    # Примусовий HTTP → HTTPS редирект
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - course-app.local
+      secretName: course-app-tls   # Secret з сертифікатом (див. команди нижче)
+  rules:
+    - host: course-app.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: course-app-service
+                port:
+                  number: 8080
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Як згенерувати self-signed сертифікат та створити Secret:
+#
+#  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+#    -keyout tls.key \
+#    -out tls.crt \
+#    -subj "/CN=course-app.local/O=course-app"
+#
+#  kubectl create secret tls course-app-tls \
+#    --key tls.key \
+#    --cert tls.crt
+#
+# Після цього: kubectl apply -f ingress-tls.yaml
+# Перевірка: curl -k https://course-app.local
+# ─────────────────────────────────────────────────────────────────────────────
+

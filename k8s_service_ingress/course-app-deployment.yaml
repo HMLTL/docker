@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: course-app
+  labels:
+    app: course-app
+spec:
+  replicas: 3                   # 3 репліки для демонстрації zero-downtime через Ingress
+  selector:
+    matchLabels:
+      app: course-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2               # під час оновлення дозволяємо +2 зайвих поди
+      maxUnavailable: 1         # не більше 1 поди недоступні одночасно
+  template:
+    metadata:
+      labels:
+        app: course-app
+    spec:
+      containers:
+        - name: course-app
+          image: course-app:local
+          imagePullPolicy: Never          # образ зібраний локально (minikube / kind)
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_HOST
+              value: "0.0.0.0"
+            - name: APP_PORT
+              value: "8080"
+            - name: APP_STORE
+              value: "redis"
+            - name: APP_REDIS_URL
+              value: "redis://redis-service:6379/0"
+          resources:
+            requests:
+              cpu: "100m"       # мінімально гарантовані ресурси для планувальника
+              memory: "64Mi"
+            limits:
+              cpu: "250m"       # максимум, щоб одна репліка не з'їла вузол
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+

@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: course-app-ingress
+  annotations:
+    # nginx Ingress Controller
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    # Увімкнути буферизацію proxy та таймаути
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout:    "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout:    "60"
+spec:
+  ingressClassName: nginx   # потребує встановленого nginx ingress controller
+  rules:
+    # Варіант 1: локальний домен (додати до /etc/hosts: <minikube ip> course-app.local)
+    - host: course-app.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: course-app-service
+                port:
+                  number: 8080
+
+    # Варіант 2: sslip.io — не потребує /etc/hosts
+    # Замінити <MINIKUBE_IP> на реальний IP (`minikube ip`)
+    # - host: course-app.<MINIKUBE_IP>.sslip.io
+    #   http:
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+    #         backend:
+    #           service:
+    #             name: course-app-service
+    #             port:
+    #               number: 8080
+
