@@ -1,0 +1,11 @@
+🎉 {{ .Chart.Name }} deployed!
+
+{{- if .Values.ingress.enabled }}
+App URL: http://{{ .Values.ingress.host }}
+Додайте у /etc/hosts: <minikube ip> {{ .Values.ingress.host }}
+{{- else }}
+kubectl port-forward svc/{{ include "course-app.fullname" . }} 8080:{{ .Values.service.port }}
+{{- end }}
+
+Redis: {{ include "course-app.redisUrl" . }}
+

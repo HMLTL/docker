@@ -1,0 +1,75 @@
+# ─── Course App ───────────────────────────────────────────────────────────────
+replicaCount: 3
+
+image:
+  repository: course-app
+  tag: local
+  pullPolicy: Never              # minikube / kind — локальний образ
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  host: course-app.local
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+  tls: []
+  # - secretName: course-app-tls
+  #   hosts:
+  #     - course-app.local
+
+env:
+  APP_HOST: "0.0.0.0"
+  APP_PORT: "8080"
+  APP_STORE: "redis"
+  # APP_REDIS_URL збирається автоматично у шаблоні
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "64Mi"
+  limits:
+    cpu: "250m"
+    memory: "128Mi"
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 2
+    maxUnavailable: 1
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 5
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 20
+  periodSeconds: 15
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# ─── Bitnami Redis subchart ──────────────────────────────────────────────────
+redis:
+  enabled: true
+  architecture: standalone       # standalone або replication
+  auth:
+    enabled: false               # для спрощення; у prod увімкнути!
+  master:
+    persistence:
+      enabled: true
+      size: 1Gi
+
