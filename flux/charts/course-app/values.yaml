@@ -1,0 +1,90 @@
+# Дефолтні значення (схожі на development).
+# Кожне середовище перевизначає їх у своєму HelmRelease (clusters/my-cluster).
+
+replicaCount: 1
+
+image:
+  repository: course-app
+  tag: local
+  pullPolicy: Never              # локальний образ (Rancher Desktop)
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  host: course-app.local
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+
+env:
+  APP_HOST: "0.0.0.0"
+  APP_PORT: "8080"
+  APP_STORE: "redis"
+  # APP_REDIS_URL формується автоматично з імені Dragonfly-сервісу
+
+# ─── Hardening (вимкнено за замовчуванням; вмикається в prod через HelmRelease) ─
+automountServiceAccountToken: false   # застосунок не звертається до API-сервера
+podSecurityContext: {}                # напр. runAsNonRoot, seccompProfile
+securityContext: {}                   # напр. drop ALL caps, allowPrivilegeEscalation:false
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 2
+
+# Ресурси контейнера course-app.
+# requests обов'язкові, інакше HPA не зможе рахувати % завантаження CPU.
+resources:
+  requests:
+    cpu: "100m"
+    memory: "64Mi"
+  limits:
+    cpu: "250m"
+    memory: "128Mi"
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 5
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 20
+  periodSeconds: 15
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# ─── HorizontalPodAutoscaler ─────────────────────────────────────────────────
+hpa:
+  enabled: false                 # у prod -> true. Коли увімкнено, replicaCount ігнорується.
+  minReplicas: 3
+  maxReplicas: 10
+  cpuUtilization: 70
+  memoryUtilization: 80
+
+# ─── Dragonfly (Operator Pattern, kind: Dragonfly) ───────────────────────────
+dragonfly:
+  enabled: true
+  replicas: 1                    # dev: 1 інстанс; prod: 2
+  proactorThreads: 2
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"

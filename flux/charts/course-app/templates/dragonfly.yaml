@@ -1,0 +1,16 @@
+{{- if .Values.dragonfly.enabled }}
+apiVersion: dragonflydb.io/v1alpha1
+kind: Dragonfly
+metadata:
+  name: {{ include "course-app.dragonflyName" . }}   # = ім'я Service для APP_REDIS_URL
+  labels:
+    {{- include "course-app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.dragonfly.replicas }}
+  args:
+    - "--proactor_threads={{ .Values.dragonfly.proactorThreads }}"
+  {{- with .Values.dragonfly.resources }}
+  resources:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

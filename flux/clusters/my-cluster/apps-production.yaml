@@ -1,0 +1,67 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-prod
+  namespace: flux-system
+spec:
+  interval: 1m
+  releaseName: course-app
+  targetNamespace: production     # Етап 4: окремий namespace
+  dependsOn:
+    - name: dragonfly-operator    # дочекатись CRD Dragonfly перед створенням інстанса БД
+      namespace: flux-system
+  driftDetection:
+    mode: enabled                 # Drift Check: відновлення вручну видалених ресурсів < хвилини
+  install:
+    createNamespace: true
+  chart:
+    spec:
+      chart: ./charts/course-app
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  # Перевизначення дефолтів чарту для production
+  values:
+    # replicaCount не задаємо: при hpa.enabled=true шаблон опускає поле replicas,
+    # тож Deployment стартує з 1 пода, а HPA одразу масштабує до minReplicas=3.
+    ingress:
+      host: course-app.local
+    resources:                    # Requests/Limits CPU+Memory
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "256Mi"
+    hpa:
+      enabled: true               # HPA 3..10
+      minReplicas: 3
+      maxReplicas: 10
+      cpuUtilization: 70
+      memoryUtilization: 80
+    # Production hardening
+    automountServiceAccountToken: false
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false   # увімкніть, якщо застосунок не пише в кореневу ФС
+      capabilities:
+        drop: ["ALL"]
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 2             # при евікціях/drain лишається щонайменше 2 поди
+    dragonfly:
+      enabled: true
+      replicas: 2                 # кластер Dragonfly з 2 реплік
+      proactorThreads: 4
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "256Mi"
+        limits:
+          cpu: "1"
+          memory: "512Mi"

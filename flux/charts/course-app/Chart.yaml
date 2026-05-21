@@ -1,0 +1,8 @@
+apiVersion: v2
+name: course-app
+description: course-app з Dragonfly (Operator Pattern) — для GitOps через Flux HelmRelease
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+# Без subchart-залежностей: БД створюється як kind: Dragonfly,
+# яку обслуговує Dragonfly Operator у кластері.

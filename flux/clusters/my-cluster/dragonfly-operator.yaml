@@ -1,0 +1,34 @@
+# (Опціонально) Встановлення Dragonfly Operator через Flux — "чистий" GitOps.
+# Файл лежить у clusters/my-cluster, який Flux вже слухає (flux-system).
+# Flux САМ генерує kustomization.yaml на льоту, скануючи всі .yaml у папці,
+# тож окремий kustomization.yaml тут не потрібен.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: dragonfly-operator
+  namespace: flux-system
+spec:
+  type: oci                        # чарт оператора публікується як OCI-артефакт у GHCR
+  interval: 1h
+  url: oci://ghcr.io/dragonflydb/dragonfly-operator/helm
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: dragonfly-operator
+  namespace: flux-system
+spec:
+  interval: 30m
+  releaseName: dragonfly-operator
+  targetNamespace: dragonfly-operator-system
+  install:
+    createNamespace: true          # namespace створює сам HelmRelease
+  chart:
+    spec:
+      chart: dragonfly-operator
+      version: "1.5.0"             # пін версії для відтворюваності GitOps
+      sourceRef:
+        kind: HelmRepository
+        name: dragonfly-operator
+        namespace: flux-system
