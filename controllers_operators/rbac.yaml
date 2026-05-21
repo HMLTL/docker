@@ -1,0 +1,36 @@
+---
+# ServiceAccount: db-viewer
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: db-viewer
+  namespace: default
+
+---
+# Role: db-readonly — тільки читання Dragonfly CR
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: db-readonly
+  namespace: default
+rules:
+  - apiGroups: ["dragonflydb.io"]       # API група Dragonfly CRD
+    resources: ["dragonflies"]           # ресурс у множині
+    verbs: ["get", "list", "watch"]      # тільки читання
+
+---
+# RoleBinding: зв'язує db-viewer ↔ db-readonly
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: db-viewer-readonly
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: db-viewer
+    namespace: default
+roleRef:
+  kind: Role
+  name: db-readonly
+  apiGroup: rbac.authorization.k8s.io
+

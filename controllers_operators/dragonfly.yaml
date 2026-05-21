@@ -1,0 +1,17 @@
+apiVersion: dragonflydb.io/v1alpha1
+kind: Dragonfly
+metadata:
+  name: dragonfly-sample
+  labels:
+    app: dragonfly-sample
+spec:
+  replicas: 2                   # master + 2 replicas (automatic failover)
+  args:
+    - "--proactor_threads=2"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
